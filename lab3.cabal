@@ -25,7 +25,8 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      Commands
+      Interpolation
   other-modules:
       Paths_lab3
   autogen-modules:
