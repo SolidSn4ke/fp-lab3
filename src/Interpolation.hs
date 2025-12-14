@@ -12,5 +12,7 @@ newton :: Int
 newton = 0
 
 -- TODO: implement
-lagrange :: Int
-lagrange = 0
+lagrange :: [(Double, Double)] -> Double -> Double
+lagrange points x = foldl (\acc (xi, yi) -> acc + yi * l xi x) 0 points
+  where
+    l xj x = foldl (\acc (xi, _) -> if xi == xj then acc else acc * (x - xi) / (xj - xi)) 1 points
