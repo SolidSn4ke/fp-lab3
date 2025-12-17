@@ -26,7 +26,9 @@ invoker :: [String] -> [Subscriber] -> IO [Subscriber]
 invoker args subs = execute command args subs
   where
     command = fromMaybe Command{execute = notFound, name = "", description = ""} $ find (\c -> name c == commandName) listOfCommands
-    commandName = map toLower $ head args
+    commandName = case args of
+        [] -> ""
+        (s : _) -> map toLower s
     notFound _ s = do
         putStrLn $ printf "Command \"%s\" not found. Enter \"help\" to see list of commands" commandName
         return s
@@ -68,7 +70,9 @@ executeLinear args subs =
         if null points
             then modifyIORef stateRef (\(p, _) -> (point : p, fst point))
             else do
-                let prev = head points
+                let prev = case points of
+                        [] -> (0, 0)
+                        (p : _) -> p
                 if fst point < start + step_
                     then return ()
                     else do
@@ -152,9 +156,9 @@ executeNewton args subs =
         checkStep points =
             let
                 p1 = case points of
+                    [] -> (0, 0)
                     (p : _) -> p
-                p2 = case points of
-                    (_ : p : _) -> p
+                p2 = points !! 1
                 step = fst p2 - fst p1
              in
                 map fst points == [fst p1, fst p1 + step .. fst p1 + step * fromIntegral (n_ - 1)]

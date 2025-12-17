@@ -34,11 +34,21 @@ newton points x =
     mul = foldl (\acc (xi, _) -> acc * (x - xi)) 1
 
 newtonSameStep :: [(Double, Double)] -> Double -> Double
-newtonSameStep points x = foldl (\acc i -> acc + head (table !! i) * mul (fromIntegral i) / factorial (fromIntegral i)) 0 [0 .. length points - 1]
+newtonSameStep points x =
+    sum $
+        map
+            ( \i -> case table !! i of
+                [] -> 0
+                (k : _) -> k * mul (fromIntegral i) / factorial (fromIntegral i)
+            )
+            [0 .. length points - 1]
   where
     h = case points of
+        [] -> 0
+        [_] -> 0
         (p1 : p2 : _) -> fst p2 - fst p1
     t = case points of
+        [] -> 0
         (p : _) -> (x - fst p) / h
     factorial n = product [1 .. n]
     lvl prev = map (\i -> prev !! (i + 1) - prev !! i) [0 .. length prev - 2]

@@ -1,0 +1,47 @@
+name: Haskell CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  stack-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Cache Stack
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.stack
+          .stack-work
+        key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml', 'package.yaml', '**/*.hs') }}
+        restore-keys: |
+          ${{ runner.os }}-stack-
+
+    - name: Setup Stack
+      uses: haskell-actions/setup@v2
+      with:
+        enable-stack: true
+        stack-version: latest
+
+    - name: Build project
+      run: stack build
+
+    - name: Run tests
+      run: stack test
+
+    - name: Run HLint
+      run: |
+        stack install hlint
+        stack exec -- hlint src/ app/ test/ --color=always
+
+    - name: Check Fourmolu formatting
+      run: |
+        stack install fourmolu
+        stack exec -- fourmolu --mode check src/ app/ test/

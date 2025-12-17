@@ -1,4 +1,4 @@
-module Subscribers (Subscriber (..), action, subName, state) where
+module Subscribers (Subscriber (..)) where
 
 import Data.IORef
 
