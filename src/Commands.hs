@@ -17,8 +17,8 @@ listOfCommands = [helpCommand, linearCommand, lagrangeCommand, newtonCommand, eo
   where
     helpCommand = Command{name = "help", execute = executeHelp, description = "help - see list of commands"}
     linearCommand = Command{name = "linear", execute = executeLinear, description = "linear <step> - linear interpolation with a specific step. Works in streaming mode. Enter \"eof\" to stop"}
-    lagrangeCommand = Command{name = "lagrange", execute = executeLagrange, description = "lagrange"}
-    newtonCommand = Command{name = "newton", description = "newton <step> - newton interpolation with a specific step. Works in streaming mode. Enter \"eof\" to stop"}
+    lagrangeCommand = Command{name = "lagrange", execute = executeLagrange, description = "lagrange <n> <step> - lagrange interpolation with n points and a specific step. Works in streaming mode. Enter \"eof\" to stop"}
+    newtonCommand = Command{name = "newton", execute = executeNewton, description = "newton <n> <step> - newton interpolation with n points and a specific step. Works in streaming mode. Enter \"eof\" to stop"}
     eofCommand = Command{name = "eof", execute = executeEOF, description = "eof - stop streaming mode"}
     exitCommand = Command{name = "exit", execute = executeExit, description = "exit - close application"}
 
@@ -101,7 +101,7 @@ executeLagrange args subs =
         resolve (length points) points start
       where
         resolve len points start
-            | len == 0 = do modifyIORef stateRef (\(p, s) -> (point : p, fst point))
+            | len == 0 = do modifyIORef stateRef (\(p, _) -> (point : p, fst point))
             | len < n_ = do modifyIORef stateRef (first (point :))
             | otherwise = do
                 let prevs = take n_ points
@@ -113,3 +113,48 @@ executeLagrange args subs =
                         if fst point >= start + 2 * step_
                             then lagrangeAction n_ step_ stateRef point
                             else modifyIORef stateRef (first (point :))
+
+executeNewton :: [String] -> [Subscriber] -> IO [Subscriber]
+executeNewton args subs =
+    if length args < 3
+        then putStrLn "< Too few args to execute" >> return subs
+        else do
+            let n = read (args !! 1) :: Int
+            let step = read (args !! 2) :: Double
+            st <- newIORef ([], 0)
+            let sub =
+                    Subscriber
+                        { subName = "newton",
+                          action = newtonAction n step,
+                          state = st
+                        }
+            putStrLn "< Subscriber has been added"
+            return (sub : subs)
+  where
+    newtonAction :: Int -> Double -> IORef ([(Double, Double)], Double) -> (Double, Double) -> IO ()
+    newtonAction n_ step_ stateRef point = do
+        (points, start) <- readIORef stateRef
+        resolve (length points) points start
+      where
+        resolve len points start
+            | len == 0 = do modifyIORef stateRef (\(p, _) -> (point : p, fst point))
+            | len < n_ = do modifyIORef stateRef (first (point :))
+            | otherwise = do
+                let prevs = take n_ points
+                if fst point < start + step_
+                    then return ()
+                    else do
+                        putStrLn $ "< newton: " ++ show (if checkStep prevs then newtonSameStep prevs (start + step_) else newton prevs (start + step_))
+                        modifyIORef stateRef (\(p, s) -> (p, s + step_))
+                        if fst point >= start + 2 * step_
+                            then newtonAction n_ step_ stateRef point
+                            else modifyIORef stateRef (first (point :))
+        checkStep points =
+            let
+                p1 = case points of
+                    (p : _) -> p
+                p2 = case points of
+                    (_ : p : _) -> p
+                step = fst p2 - fst p1
+             in
+                map fst points == [fst p1, fst p1 + step .. fst p1 + step * fromIntegral (n_ - 1)]
